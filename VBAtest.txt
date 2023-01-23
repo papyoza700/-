@@ -1,0 +1,47 @@
+Sub 画像挿入() 'サブディレクトリ内のデータを開く
+    Dim imgPath As String '画像フォルダパス
+    Dim imgFile As String '画像名
+    
+    imgPath = Range("L2").Value
+    imgFile = Range("B1").Value & ".jpg"
+
+    Call FileSearch(imgPath, imgFile)
+End Sub
+Sub FileSearch(Path As String, Target As String) 'ファイルサーチ用の引数（再帰に使う）
+    Dim FSO As Object  'サブフォルダ全般
+    Dim Folder As Variant  'サブフォルダ
+    Dim File As Variant  'サブフォルダ内のファイル
+    Dim myShape As Shape 'オブジェクト
+    Dim myRange As Range 'オブジェクトの位置
+      
+    Set FSO = CreateObject("Scripting.FileSystemObject")
+    'FileSystemObjectを使うと、あるフォルダに存在するすべてのサブフォルダを取得し
+    '変数FSOに格納
+    
+    For Each Folder In FSO.GetFolder(Path).SubFolders '検索値内のサブフォルダを探すパス
+        Call FileSearch(Folder.Path, Target)   ''見つかったフォルダを引数に指定して、自分自身を呼び出す
+    Next Folder
+    
+    For Each File In FSO.GetFolder(Path).Files 'FSOフォルダ内の全ファイルは、Filesコレクションで取得、変数Fileに格納
+        If File.Name = Target Then '検索値と同じなら
+            Debug.Print File.Path 'パスを表示
+            
+            On Error GoTo myError
+            
+            '残ってる画像を一旦削除
+            For Each myShape In ActiveSheet.Shapes  'シート上のオブジェクトを全てチェック
+                Set myRange = Range(myShape.TopLeftCell, myShape.BottomRightCell) 'オブジェクトの位置を取得
+                If Not (Intersect(myRange, Range("B6")) Is Nothing) Then  'B6上にあるオブジェクトを削除
+                    myShape.Delete
+                End If
+            Next
+            
+            '画像を挿入し、B6に移動させる
+            With ActiveSheet.Pictures.Insert(File.Path)
+                .Top = Range("B6").Top
+                .Left = Range("B6").Left
+            End With
+myError:
+        End If
+    Next File
+End Sub
